@@ -4,12 +4,45 @@ const bodyParser = require("body-parser");
 const app = express();
 const jwt = require ('jsonwebtoken');
 const SECRET_KEY = "clavesecreta"
-
-//HAAY QUE VER SI LO HACEMOS CON ESE FS O COMO ESTA HECHO
-const fs = require('fs')
-
-app.use(cors());
 app.use(bodyParser.json());
+
+
+
+// BD
+const mariadb = require('mariadb');
+const pool = mariadb.createPool({host: "localhost", user: "root", password: "1947", database:"entrega8", connectionLimit: 10});
+
+
+app.post('/cart', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const cartItems = req.body.cosasenelcart; 
+
+        
+        for (const item of cartItems) {
+            await connection.query('INSERT INTO carrito (id, name, unitCost, currency, image, count) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.name, item.unitCost, item.currency, item.image, item.count]);
+        }
+
+        connection.release();
+
+        // Envia una respuesta de éxito al cliente
+        res.status(200).json({ message: 'Carrito actualizado con éxito en la base de datos' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al actualizar el carrito en la base de datos' });
+    }
+});
+
+
+
+
+
+app.use(cors({
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type,Authorization',
+}));
+
 
 let cats = require('./API/cats/cat.json');
 let buy = require('./API/cart/buy.json');
@@ -93,12 +126,12 @@ app.post("/login", (req, res) => {
 });
 
 
-app.use('/cart', (req, res, next) =>{
-    try {
-        const decoded = jwt.verify(req.headers["access-token"], SECRET_KEY);
-        console.log(decoded)
-        next();
-    } catch (error) {
-        res.status(401).json({menssege:"no autorizado"})
-    }
-})
+// app.use('/cart', (req, res, next) =>{
+//     try {
+//         const decoded = jwt.verify(req.headers["access-token"], SECRET_KEY);
+//         console.log(decoded)
+//         next();
+//     } catch (error) {
+//         res.status(401).json({menssege:"no autorizado"})
+//     }
+// })
