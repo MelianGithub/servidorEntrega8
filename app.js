@@ -20,7 +20,7 @@ let products = './API/products';
 let productsComments = './API/products_comments';
 let userCart = './API/user_cart';
 
-// let arrayUsers = [];
+
 
 
 
@@ -33,16 +33,12 @@ app.post('/cart', async (req, res) => {
     try {
         const connection = await pool.getConnection();
 
-        const cartItems = req.body.cosasenelcart; 
-
-        
+        const cartItems = req.body.cosasenelcart;         
         for (const item of cartItems) {
             await connection.query('INSERT INTO carrito (id, name, unitCost, currency, image, count) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.name, item.unitCost, item.currency, item.image, item.count]);
         }
 
         connection.release();
-
-
         res.status(200).json({ message: 'Carrito actualizado con éxito en la base de datos' });
     } catch (error) {
         console.error(error);
@@ -110,24 +106,43 @@ app.get("/login", (req, res) =>{
 
 
 
-// Asumo que arrayUsers contiene objetos con las propiedades username y password
+const fs = require('fs');
+
 app.post("/login", (req, res) => {
     const { username, password } = req.body;
 
-    // Busca el usuario en el arrayUsers
-    const user = arrayUsers.find(u => u.username === username && u.password === password);
+    // Lee el archivo users.json
+    fs.readFile('./API/registros/users.json', 'utf8', (err, data) => {
+        let arrayUsers;
 
-    if (user) {
-        // Usuario autenticado, genera un token
-        const token = jwt.sign({ username }, SECRET_KEY);
-        res.status(200).json({ token });
-    } else {
-        res.status(401).json({ message: "Usuario y/o contraseña incorrectos" });
-    }
+        if (err) {
+            console.error("Error al leer el archivo JSON:", err);
+            res.status(500).json({ error: 'Error al autenticar al usuario' });
+            return;
+        }
+
+        try {
+            // Intenta parsear el contenido del archivo
+            arrayUsers = JSON.parse(data);
+        } catch (jsonError) {
+            // Si hay un error al analizar el JSON, devuelve un error
+            console.error("Error al analizar el JSON:", jsonError);
+            res.status(500).json({ error: 'Error al autenticar al usuario' });
+            return;
+        }
+
+        // Busca el usuario en arrayUsers
+        const user = arrayUsers.find(u => u.username === username && u.password === password);
+
+        if (user) {
+            // Usuario autenticado, genera un token
+            const token = jwt.sign({ username }, SECRET_KEY);
+            res.status(200).json({ token });
+        } else {
+            res.status(401).json({ message: "Usuario y/o contraseña incorrectos" });
+        }
+    });
 });
-
-
-
 
 app.use('/cart', (req, res, next) =>{
     try {
@@ -143,30 +158,8 @@ app.use('/cart', (req, res, next) =>{
 
 
 
-// app.post("/register", (req, res) => {
-//     const { username, password } = req.body;
-
-//     // Verificar si el usuario ya existe en el arrayUsers
-//     const existingUser = arrayUsers.find(u => u.username === username);
-
-//     if (existingUser) {
-//         // Si el usuario ya existe, devolver un error
-//         res.status(409).json({ message: "El usuario ya existe" });
-//     } else {
-//         // Si el usuario no existe, agregarlo al arrayUsers
-//         arrayUsers.push({ username, password });
-
-//         // Puedes opcionalmente generar un token y devolverlo como respuesta
-//         const token = jwt.sign({ username }, SECRET_KEY);
-
-//         res.status(201).json({ message: "Usuario registrado exitosamente", token });
-//     }
-
-//     console.log(arrayUsers)
-// });
 
 
-const fs = require('fs');
 
 app.post("/register", (req, res) => {
     const { username, password } = req.body;
