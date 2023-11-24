@@ -22,31 +22,6 @@ let userCart = './API/user_cart';
 
 
 
-
-
-// BD
-const mariadb = require('mariadb');
-const pool = mariadb.createPool({host: "localhost", user: "root", password: "1947", database:"entrega8", connectionLimit: 10});
-
-
-app.post('/cart', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-
-        const cartItems = req.body.cosasenelcart;         
-        for (const item of cartItems) {
-            await connection.query('INSERT INTO carrito (id, name, unitCost, currency, image, count) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.name, item.unitCost, item.currency, item.image, item.count]);
-        }
-
-        connection.release();
-        res.status(200).json({ message: 'Carrito actualizado con éxito en la base de datos' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error al actualizar el carrito en la base de datos' });
-    }
-});
-
-
 app.get("/", (req, res) => {
     res.send("Servidor Grupo 255 - 2023")
 })
@@ -112,7 +87,7 @@ app.post("/login", (req, res) => {
     const { username, password } = req.body;
 
     // Lee el archivo users.json
-    fs.readFile('./API/registros/users.json', 'utf8', (err, data) => {
+    fs.readFile('./SERVIDOR/API/registros/users.json', 'utf8', (err, data) => {
         let arrayUsers;
 
         if (err) {
@@ -144,18 +119,39 @@ app.post("/login", (req, res) => {
     });
 });
 
-app.use('/cart', (req, res, next) =>{
+app.use('/cart', (req, res, next) => {
     try {
-        const decoded = jwt.verify(req.headers["access-token"], SECRET_KEY);
-        console.log(decoded)
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, SECRET_KEY);
+        console.log(decoded);
         next();
     } catch (error) {
-        res.status(401).json({menssege:"no autorizado"})
+        res.status(401).json({ message: "No autorizado" });
     }
-})
+});
 
 
+// BD
+const mariadb = require('mariadb');
+const pool = mariadb.createPool({host: "localhost", user: "root", password: "1947", database:"entrega8", connectionLimit: 10});
 
+
+app.post('/cart', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const cartItems = req.body.cosasenelcart;         
+        for (const item of cartItems) {
+            await connection.query('INSERT INTO carrito (id, name, unitCost, currency, image, count) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.name, item.unitCost, item.currency, item.image, item.count]);
+        }
+
+        connection.release();
+        res.status(200).json({ message: 'Carrito actualizado con éxito en la base de datos' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al actualizar el carrito en la base de datos' });
+    }
+});
 
 
 
@@ -165,7 +161,7 @@ app.post("/register", (req, res) => {
     const { username, password } = req.body;
 
     // Lee el archivo users.json
-    fs.readFile('./API/registros/users.json', 'utf8', (err, data) => {
+    fs.readFile('./SERVIDOR/API/registros/users.json', 'utf8', (err, data) => {
         let arrayUsers;
 
         if (err) {
@@ -194,7 +190,7 @@ app.post("/register", (req, res) => {
             arrayUsers.push({ username, password });
 
             // Escribe el nuevo arrayUsers de nuevo al archivo users.json
-            fs.writeFile('./API/registros/users.json', JSON.stringify(arrayUsers), 'utf8', (writeError) => {
+            fs.writeFile('./SERVIDOR/API/registros/users.json', JSON.stringify(arrayUsers), 'utf8', (writeError) => {
                 if (writeError) {
                     console.error("Error al escribir en el archivo JSON:", writeError);
                     res.status(500).json({ error: 'Error al registrar el usuario' });
